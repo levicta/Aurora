@@ -119,11 +119,6 @@
       "comment": "Tab:CreateRow factory (NEW in v7)"
     },
     {
-      "name": "_AccordionSection",
-      "file": "src/elements/AccordionSection.lua",
-      "comment": "Tab:CreateAccordionSection factory (NEW in v7)"
-    },
-    {
       "name": "Tab",
       "file": "src/Tab.lua",
       "comment": "Tab prototype — element methods defined once on metatable"
