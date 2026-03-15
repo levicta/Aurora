@@ -1971,66 +1971,97 @@ end)()
 local _AccordionSection = (function()
 return function(self, cfg)
     cfg = cfg or {}
-    local labelText  = cfg.Text        or "Section"
+    local labelText   = cfg.Text        or "Section"
     local defaultOpen = cfg.DefaultOpen ~= false   -- default: open
-    local expanded   = defaultOpen
-    local OnChanged  = Signal.new()
+    local expanded    = defaultOpen
+    local OnChanged   = Signal.new()
 
-    -- ── Outer container (clips inner content when collapsed) ─────────────────
+    local HEADER_H    = 36
+    local SEP_H       = 1
+    local COLOR_HOVER = Color3.fromRGB(32, 32, 40)
+
+    -- ── Outer container ───────────────────────────────────────────────────────
+    -- Surface fill + UIStroke gives this a proper card boundary against the
+    -- Background-coloured tab area.  ClipsDescendants handles the collapse mask
+    -- and also rounds the exposed corners of the AccentBar automatically.
     local OuterFrame = Utility.Create("Frame", {
         Parent           = self.Content,
-        Size             = UDim2.new(1, 0, 0, 36),
-        BackgroundColor3 = Config.Theme.Background,
+        Size             = UDim2.new(1, 0, 0, HEADER_H),
+        BackgroundColor3 = Config.Theme.Surface,
         BorderSizePixel  = 0,
         ClipsDescendants = true,
     })
-    Utility.AddCorner(OuterFrame, UDim.new(0, 4))
+    Utility.AddCorner(OuterFrame, UDim.new(0, 6))
+    Utility.Create("UIStroke", {
+        Parent       = OuterFrame,
+        Color        = Config.Theme.Border,
+        Thickness    = 1,
+        Transparency = 0.45,
+    })
 
-    -- ── Header bar ───────────────────────────────────────────────────────────
+    -- ── Header bar ────────────────────────────────────────────────────────────
+    -- Same colour as OuterFrame — acts as the hover-tween target so only the
+    -- header region changes, not the content area or the card stroke.
     local Header = Utility.Create("Frame", {
         Parent           = OuterFrame,
-        Size             = UDim2.new(1, 0, 0, 36),
-        BackgroundColor3 = Config.Theme.Surface,
-        BorderSizePixel  = 0,
-    })
-    Utility.AddCorner(Header, UDim.new(0, 4))
-    -- Flush bottom corners so header blends into content when open
-    Utility.Create("Frame", {
-        Parent           = Header,
-        Position         = UDim2.new(0, 0, 1, -6),
-        Size             = UDim2.new(1, 0, 0, 6),
+        Size             = UDim2.new(1, 0, 0, HEADER_H),
         BackgroundColor3 = Config.Theme.Surface,
         BorderSizePixel  = 0,
     })
 
+    -- 3px Primary accent bar on the left edge.  ClipsDescendants + 6px corner
+    -- radius on OuterFrame rounds its corners without any cover-frame trickery.
+    Utility.Create("Frame", {
+        Parent           = Header,
+        Position         = UDim2.new(0, 0, 0, 0),
+        Size             = UDim2.new(0, 3, 1, 0),
+        BackgroundColor3 = Config.Theme.Primary,
+        BorderSizePixel  = 0,
+    })
+
+    -- Section label — 16px left offset to clear the accent bar.
     Utility.Create("TextLabel", {
         Parent             = Header,
-        Position           = UDim2.new(0, 12, 0, 0),
-        Size               = UDim2.new(1, -38, 1, 0),
+        Position           = UDim2.new(0, 16, 0, 0),
+        Size               = UDim2.new(1, -44, 1, 0),
         BackgroundTransparency = 1,
         Text               = labelText:upper(),
         TextColor3         = Config.Theme.Primary,
         Font               = Config.FontBold,
-        TextSize           = 11,
+        TextSize           = 12,
         TextXAlignment     = Enum.TextXAlignment.Left,
     })
 
+    -- Arrow — Primary tint to match the label (was TextMuted before).
     local Arrow = Utility.Create("TextLabel", {
         Parent             = Header,
-        Position           = UDim2.new(1, -28, 0, 0),
-        Size               = UDim2.new(0, 20, 0, 36),
+        Position           = UDim2.new(1, -30, 0, 0),
+        Size               = UDim2.new(0, 20, 0, HEADER_H),
         BackgroundTransparency = 1,
         Text               = "▼",
-        TextColor3         = Config.Theme.TextMuted,
+        TextColor3         = Config.Theme.Primary,
         Font               = Config.FontBold,
-        TextSize           = 11,
+        TextSize           = 10,
         Rotation           = defaultOpen and 180 or 0,
     })
 
-    -- ── Inner content frame ──────────────────────────────────────────────────
+    -- ── Separator ─────────────────────────────────────────────────────────────
+    -- 1px line at Y = HEADER_H — naturally clipped when the section is collapsed.
+    -- Fades in/out alongside the expand animation.
+    local Separator = Utility.Create("Frame", {
+        Parent                 = OuterFrame,
+        Position               = UDim2.new(0, 8, 0, HEADER_H),
+        Size                   = UDim2.new(1, -16, 0, SEP_H),
+        BackgroundColor3       = Config.Theme.Border,
+        BorderSizePixel        = 0,
+        BackgroundTransparency = defaultOpen and 0.4 or 1,
+    })
+
+    -- ── Inner content frame ───────────────────────────────────────────────────
+    -- Starts below separator.  Horizontal padding keeps children off card edges.
     local InnerFrame = Utility.Create("Frame", {
         Parent             = OuterFrame,
-        Position           = UDim2.new(0, 0, 0, 36),
+        Position           = UDim2.new(0, 0, 0, HEADER_H + SEP_H),
         Size               = UDim2.new(1, 0, 0, 0),
         BackgroundTransparency = 1,
         BorderSizePixel    = 0,
@@ -2043,13 +2074,13 @@ return function(self, cfg)
     })
     Utility.Create("UIPadding", {
         Parent        = InnerFrame,
-        PaddingTop    = UDim.new(0, 6),
-        PaddingBottom = UDim.new(0, 8),
-        PaddingLeft   = UDim.new(0, 0),
-        PaddingRight  = UDim.new(0, 0),
+        PaddingTop    = UDim.new(0, 8),
+        PaddingBottom = UDim.new(0, 10),
+        PaddingLeft   = UDim.new(0, 8),
+        PaddingRight  = UDim.new(0, 8),
     })
 
-    -- ── Proxy ────────────────────────────────────────────────────────────────
+    -- ── Proxy ─────────────────────────────────────────────────────────────────
     -- Create* methods are called on this object. It redirects Content to
     -- InnerFrame; everything else falls through to the parent Tab.
     local proxy = {
@@ -2062,13 +2093,13 @@ return function(self, cfg)
     }
     setmetatable(proxy, { __index = self })
 
-    -- ── Size management ──────────────────────────────────────────────────────
+    -- ── Size management ───────────────────────────────────────────────────────
     local function getExpandedH()
-        return 36 + InnerFrame.AbsoluteSize.Y
+        return HEADER_H + SEP_H + InnerFrame.AbsoluteSize.Y
     end
 
     local function applySize(animate)
-        local targetH = expanded and getExpandedH() or 36
+        local targetH = expanded and getExpandedH() or HEADER_H
         if animate then
             Utility.Tween(OuterFrame, { Size = UDim2.new(1, 0, 0, targetH) }, 0.2)
         else
@@ -2088,30 +2119,43 @@ return function(self, cfg)
         applySize(false)
     end)
 
-    -- ── Header toggle ────────────────────────────────────────────────────────
-    Utility.Create("TextButton", {
+    -- ── Header toggle ─────────────────────────────────────────────────────────
+    local ClickButton = Utility.Create("TextButton", {
         Parent             = Header,
         Size               = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Text               = "",
         ZIndex             = 2,
-    }).MouseButton1Click:Connect(function()
+    })
+
+    -- Subtle hover: tween Header background only, accent bar + arrow stay stable.
+    ClickButton.MouseEnter:Connect(function()
+        Utility.Tween(Header, { BackgroundColor3 = COLOR_HOVER }, 0.15)
+    end)
+    ClickButton.MouseLeave:Connect(function()
+        Utility.Tween(Header, { BackgroundColor3 = Config.Theme.Surface }, 0.15)
+    end)
+
+    ClickButton.MouseButton1Click:Connect(function()
         expanded = not expanded
         Utility.Tween(Arrow, { Rotation = expanded and 180 or 0 }, 0.2)
+        Utility.Tween(Separator, { BackgroundTransparency = expanded and 0.4 or 1 }, expanded and 0.15 or 0.05)
         applySize(true)
         OnChanged:Fire(expanded)
     end)
 
-    -- ── Register on parent tab ───────────────────────────────────────────────
+    -- ── Register on parent tab ────────────────────────────────────────────────
     local element = self:RegisterElement({
         OnChanged = OnChanged,
         GetValue  = function() return expanded end,
         -- SetValue(bool): programmatically expand or collapse.
+        -- Silent — does not fire OnChanged (matches every other element's contract).
         SetValue  = function(v)
             v = not not v
             if v == expanded then return end
             expanded = v
             Utility.Tween(Arrow, { Rotation = expanded and 180 or 0 }, 0.2)
+            Utility.Tween(Separator, { BackgroundTransparency = expanded and 0.4 or 1 }, expanded and 0.15 or 0.05)
             applySize(true)
         end,
         -- Convenience aliases
@@ -2119,17 +2163,19 @@ return function(self, cfg)
             if expanded then return end
             expanded = true
             Utility.Tween(Arrow, { Rotation = 180 }, 0.2)
+            Utility.Tween(Separator, { BackgroundTransparency = 0.4 }, 0.15)
             applySize(true)
         end,
         Collapse = function()
             if not expanded then return end
             expanded = false
             Utility.Tween(Arrow, { Rotation = 0 }, 0.2)
+            Utility.Tween(Separator, { BackgroundTransparency = 1 }, 0.05)
             applySize(true)
         end,
     }, OuterFrame)
 
-    -- ── Expose Create* via proxy ─────────────────────────────────────────────
+    -- ── Expose Create* via proxy ──────────────────────────────────────────────
     -- Each method calls the Tab factory with `proxy` as self so elements are
     -- parented to InnerFrame rather than tab.Content.
     -- Use `self` (the tab instance) rather than the `Tab` upvalue — Tab is defined
@@ -2152,7 +2198,7 @@ return function(self, cfg)
     element.CreateTable          = function(_, c) return self.CreateTable(proxy, c) end
     element.CreateRow            = function(_, c) return self.CreateRow(proxy, c) end
 
-    -- ── Override Destroy to cascade to children ──────────────────────────────
+    -- ── Override Destroy to cascade to children ───────────────────────────────
     local parentDestroy = element.Destroy
     element.Destroy = function()
         for _, child in ipairs(proxy.Elements) do
