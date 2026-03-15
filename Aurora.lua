@@ -2030,7 +2030,7 @@ return function(self, cfg)
     -- Parented to OuterFrame so it covers the entire left edge when expanded,
     -- not just the 36px header.  ClipsDescendants + UICorner on OuterFrame
     -- handle rounding.  ZIndex 2 keeps it above the UIStroke.
-    Utility.Create("Frame", {
+    local AccentBar = Utility.Create("Frame", {
         Parent           = OuterFrame,
         Position         = UDim2.new(0, 0, 0, 0),
         Size             = UDim2.new(0, 3, 1, 0),
@@ -2038,6 +2038,7 @@ return function(self, cfg)
         BorderSizePixel  = 0,
         ZIndex           = 2,
     })
+    Utility.AddCorner(AccentBar, UDim.new(1, 0))   -- pill ends; capped at 1.5px on a 3px-wide bar
 
     -- Section label — offset 16px from the left to clear the accent bar.
     Utility.Create("TextLabel", {
