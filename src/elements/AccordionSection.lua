@@ -14,23 +14,48 @@
 --   - section:Destroy() cascades to all children before destroying the frame.
 --   - OuterFrame height is tracked via InnerFrame:GetPropertyChangedSignal
 --     so children added after creation expand the accordion automatically.
+--
+-- v7.1 visual changes:
+--   - Left accent bar in Primary colour anchors the header as a clickable card.
+--   - OuterFrame uses Surface background (not Background) so it reads as a
+--     raised card rather than blending into the content area behind it.
+--   - A 1px Border-coloured stroke is simulated via a slightly larger backing
+--     frame so the closed state has visible edges.
+--   - Header gains MouseEnter/MouseLeave hover feedback.
+--   - Arrow uses Primary colour (matching the title) instead of TextMuted.
+--   - When collapsed the bottom-flush patch is hidden; when expanded it is shown,
+--     keeping the header seamlessly connected to the content.
 
 return function(self, cfg)
     cfg = cfg or {}
-    local labelText  = cfg.Text        or "Section"
+    local labelText   = cfg.Text        or "Section"
     local defaultOpen = cfg.DefaultOpen ~= false   -- default: open
-    local expanded   = defaultOpen
-    local OnChanged  = Signal.new()
+    local expanded    = defaultOpen
+    local OnChanged   = Signal.new()
 
     -- ── Outer container (clips inner content when collapsed) ─────────────────
+    -- Surface background gives the card visible depth against the tab's
+    -- Background-coloured scroll area.
     local OuterFrame = Utility.Create("Frame", {
         Parent           = self.Content,
         Size             = UDim2.new(1, 0, 0, 36),
-        BackgroundColor3 = Config.Theme.Background,
+        BackgroundColor3 = Config.Theme.Surface,
         BorderSizePixel  = 0,
         ClipsDescendants = true,
     })
-    Utility.AddCorner(OuterFrame, UDim.new(0, 4))
+    Utility.AddCorner(OuterFrame, UDim.new(0, 6))
+
+    -- 1px border effect: a slightly larger frame behind OuterFrame in Border colour.
+    -- Placed at ZIndex - 1 so it sits behind all content.
+    local BorderBacking = Utility.Create("Frame", {
+        Parent           = OuterFrame,
+        Position         = UDim2.new(0, -1, 0, -1),
+        Size             = UDim2.new(1, 2, 1, 2),
+        BackgroundColor3 = Config.Theme.Border,
+        BorderSizePixel  = 0,
+        ZIndex           = OuterFrame.ZIndex - 1,
+    })
+    Utility.AddCorner(BorderBacking, UDim.new(0, 7))
 
     -- ── Header bar ───────────────────────────────────────────────────────────
     local Header = Utility.Create("Frame", {
@@ -39,20 +64,34 @@ return function(self, cfg)
         BackgroundColor3 = Config.Theme.Surface,
         BorderSizePixel  = 0,
     })
-    Utility.AddCorner(Header, UDim.new(0, 4))
-    -- Flush bottom corners so header blends into content when open
-    Utility.Create("Frame", {
+    Utility.AddCorner(Header, UDim.new(0, 6))
+
+    -- Flush-bottom patch: shown when expanded so the header blends seamlessly
+    -- into the content area below it; hidden when collapsed so the rounded
+    -- bottom corners of the header are visible.
+    local FlushPatch = Utility.Create("Frame", {
         Parent           = Header,
-        Position         = UDim2.new(0, 0, 1, -6),
-        Size             = UDim2.new(1, 0, 0, 6),
+        Position         = UDim2.new(0, 0, 1, -8),
+        Size             = UDim2.new(1, 0, 0, 8),
         BackgroundColor3 = Config.Theme.Surface,
         BorderSizePixel  = 0,
+        Visible          = defaultOpen,
     })
+
+    -- Left accent bar — primary colour, communicates interactivity.
+    local AccentBar = Utility.Create("Frame", {
+        Parent           = Header,
+        Position         = UDim2.new(0, 0, 0, 6),
+        Size             = UDim2.new(0, 3, 1, -12),
+        BackgroundColor3 = Config.Theme.Primary,
+        BorderSizePixel  = 0,
+    })
+    Utility.AddCorner(AccentBar, UDim.new(1, 0))
 
     Utility.Create("TextLabel", {
         Parent             = Header,
-        Position           = UDim2.new(0, 12, 0, 0),
-        Size               = UDim2.new(1, -38, 1, 0),
+        Position           = UDim2.new(0, 14, 0, 0),
+        Size               = UDim2.new(1, -42, 1, 0),
         BackgroundTransparency = 1,
         Text               = labelText:upper(),
         TextColor3         = Config.Theme.Primary,
@@ -61,15 +100,17 @@ return function(self, cfg)
         TextXAlignment     = Enum.TextXAlignment.Left,
     })
 
+    -- Arrow: Primary colour so it reads as part of the same interactive unit
+    -- as the title rather than a separate, dimmed hint.
     local Arrow = Utility.Create("TextLabel", {
         Parent             = Header,
         Position           = UDim2.new(1, -28, 0, 0),
         Size               = UDim2.new(0, 20, 0, 36),
         BackgroundTransparency = 1,
         Text               = "▼",
-        TextColor3         = Config.Theme.TextMuted,
+        TextColor3         = Config.Theme.Primary,
         Font               = Config.FontBold,
-        TextSize           = 11,
+        TextSize           = 12,
         Rotation           = defaultOpen and 180 or 0,
     })
 
@@ -91,8 +132,8 @@ return function(self, cfg)
         Parent        = InnerFrame,
         PaddingTop    = UDim.new(0, 6),
         PaddingBottom = UDim.new(0, 8),
-        PaddingLeft   = UDim.new(0, 0),
-        PaddingRight  = UDim.new(0, 0),
+        PaddingLeft   = UDim.new(0, 6),
+        PaddingRight  = UDim.new(0, 6),
     })
 
     -- ── Proxy ────────────────────────────────────────────────────────────────
@@ -100,10 +141,10 @@ return function(self, cfg)
     -- InnerFrame; everything else falls through to the parent Tab.
     local proxy = {
         Content          = InnerFrame,
-        Elements         = {},            -- own list; does not pollute tab.Elements
+        Elements         = {},
         _window          = self._window,
-        _elementConnSets = self._elementConnSets,   -- shared: Window:Destroy() cleans up
-        _emptyLabel      = { Visible = true },      -- dummy: prevents touching tab's label
+        _elementConnSets = self._elementConnSets,
+        _emptyLabel      = { Visible = true },
         OnElementAdded   = Signal.new(),
     }
     setmetatable(proxy, { __index = self })
@@ -115,6 +156,8 @@ return function(self, cfg)
 
     local function applySize(animate)
         local targetH = expanded and getExpandedH() or 36
+        -- Show/hide the flush patch so corners look correct in both states.
+        FlushPatch.Visible = expanded
         if animate then
             Utility.Tween(OuterFrame, { Size = UDim2.new(1, 0, 0, targetH) }, 0.2)
         else
@@ -134,14 +177,26 @@ return function(self, cfg)
         applySize(false)
     end)
 
-    -- ── Header toggle ────────────────────────────────────────────────────────
-    Utility.Create("TextButton", {
+    -- ── Header toggle + hover feedback ───────────────────────────────────────
+    local ToggleBtn = Utility.Create("TextButton", {
         Parent             = Header,
         Size               = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Text               = "",
         ZIndex             = 2,
-    }).MouseButton1Click:Connect(function()
+    })
+
+    -- Hover: brighten the header slightly so it feels clickable.
+    ToggleBtn.MouseEnter:Connect(function()
+        Utility.Tween(Header, { BackgroundColor3 = Color3.fromRGB(32, 32, 40) }, 0.15)
+        FlushPatch.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
+    end)
+    ToggleBtn.MouseLeave:Connect(function()
+        Utility.Tween(Header, { BackgroundColor3 = Config.Theme.Surface }, 0.15)
+        FlushPatch.BackgroundColor3 = Config.Theme.Surface
+    end)
+
+    ToggleBtn.MouseButton1Click:Connect(function()
         expanded = not expanded
         Utility.Tween(Arrow, { Rotation = expanded and 180 or 0 }, 0.2)
         applySize(true)
@@ -152,7 +207,6 @@ return function(self, cfg)
     local element = self:RegisterElement({
         OnChanged = OnChanged,
         GetValue  = function() return expanded end,
-        -- SetValue(bool): programmatically expand or collapse.
         SetValue  = function(v)
             v = not not v
             if v == expanded then return end
@@ -160,8 +214,7 @@ return function(self, cfg)
             Utility.Tween(Arrow, { Rotation = expanded and 180 or 0 }, 0.2)
             applySize(true)
         end,
-        -- Convenience aliases
-        Expand   = function()
+        Expand = function()
             if expanded then return end
             expanded = true
             Utility.Tween(Arrow, { Rotation = 180 }, 0.2)
@@ -176,8 +229,6 @@ return function(self, cfg)
     }, OuterFrame)
 
     -- ── Expose Create* via proxy ─────────────────────────────────────────────
-    -- Each method calls the Tab factory with `proxy` as self so elements are
-    -- parented to InnerFrame rather than tab.Content.
     element.CreateButton         = function(_, c) return Tab.CreateButton(proxy, c) end
     element.CreateToggle         = function(_, c) return Tab.CreateToggle(proxy, c) end
     element.CreateSlider         = function(_, c) return Tab.CreateSlider(proxy, c) end
