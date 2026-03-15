@@ -1985,23 +1985,35 @@ return function(self, cfg)
     local COLOR_HOVER = Color3.fromRGB(32, 32, 40)   -- slightly brighter than Surface
 
     -- ── Outer container ───────────────────────────────────────────────────────
-    -- Surface fill + border stroke gives this a proper "card" boundary against
-    -- the Background-coloured tab content area.  ClipsDescendants handles the
-    -- expand/collapse mask and also rounds the exposed corners of the AccentBar.
-    local OuterFrame = Utility.Create("Frame", {
+    -- Two-frame approach: WrapperFrame carries the UIStroke and UICorner (visible
+    -- card boundary); OuterFrame sits inside it at full size and carries
+    -- ClipsDescendants (expand/collapse mask).  Keeping them separate avoids the
+    -- Roblox rendering quirk where UIStroke on a ClipsDescendants frame can have
+    -- its outer half clipped during size animation, producing a thinner-than-expected
+    -- border at intermediate heights.
+    local WrapperFrame = Utility.Create("Frame", {
         Parent           = self.Content,
         Size             = UDim2.new(1, 0, 0, HEADER_H),
         BackgroundColor3 = Config.Theme.Surface,
         BorderSizePixel  = 0,
-        ClipsDescendants = true,
     })
-    Utility.AddCorner(OuterFrame, UDim.new(0, 6))
+    Utility.AddCorner(WrapperFrame, UDim.new(0, 6))
     Utility.Create("UIStroke", {
-        Parent       = OuterFrame,
+        Parent       = WrapperFrame,
         Color        = Config.Theme.Border,
         Thickness    = 1,
         Transparency = 0.45,
     })
+
+    -- OuterFrame: full-size child that clips all inner content.
+    local OuterFrame = Utility.Create("Frame", {
+        Parent           = WrapperFrame,
+        Size             = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel  = 0,
+        ClipsDescendants = true,
+    })
+    Utility.AddCorner(OuterFrame, UDim.new(0, 6))
 
     -- ── Header bar ────────────────────────────────────────────────────────────
     -- Same colour as OuterFrame — renders invisible but acts as the hover target
@@ -2030,8 +2042,8 @@ return function(self, cfg)
     -- Section label — offset 16px from the left to clear the accent bar.
     Utility.Create("TextLabel", {
         Parent             = Header,
-        Position           = UDim2.new(0, 16, 0, 0),
-        Size               = UDim2.new(1, -44, 1, 0),
+        Position           = UDim2.new(0, 20, 0, 0),
+        Size               = UDim2.new(1, -48, 1, 0),
         BackgroundTransparency = 1,
         Text               = labelText:upper(),
         TextColor3         = Config.Theme.Primary,
@@ -2087,7 +2099,7 @@ return function(self, cfg)
     Utility.Create("UIPadding", {
         Parent        = InnerFrame,
         PaddingTop    = UDim.new(0, 8),
-        PaddingBottom = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 8),
         PaddingLeft   = UDim.new(0, 8),
         PaddingRight  = UDim.new(0, 8),
     })
@@ -2113,16 +2125,16 @@ return function(self, cfg)
     local function applySize(animate)
         local targetH = expanded and getExpandedH() or HEADER_H
         if animate then
-            Utility.Tween(OuterFrame, { Size = UDim2.new(1, 0, 0, targetH) }, 0.2)
+            Utility.Tween(WrapperFrame, { Size = UDim2.new(1, 0, 0, targetH) }, 0.2)
         else
-            OuterFrame.Size = UDim2.new(1, 0, 0, targetH)
+            WrapperFrame.Size = UDim2.new(1, 0, 0, targetH)
         end
     end
 
     -- Keep outer height in sync as children are added/removed while open.
     InnerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
         if expanded then
-            OuterFrame.Size = UDim2.new(1, 0, 0, getExpandedH())
+            WrapperFrame.Size = UDim2.new(1, 0, 0, getExpandedH())
         end
     end)
 
@@ -2137,7 +2149,7 @@ return function(self, cfg)
         Size               = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Text               = "",
-        ZIndex             = 2,
+        ZIndex             = 3,
     })
 
     -- Subtle hover feedback: tween Header background between Surface and a
@@ -2197,7 +2209,22 @@ return function(self, cfg)
             Utility.Tween(Separator, { BackgroundTransparency = 1 }, 0.05)
             applySize(true)
         end,
-    }, OuterFrame)
+    }, WrapperFrame)
+
+    -- ── Override SetEnabled to reset header hover state ───────────────────────
+    -- RegisterElement injects a SetEnabled that handles the overlay and text dim,
+    -- but it doesn't know about the Header hover tween.  If the header is hovered
+    -- when SetEnabled(false) fires, Header.BackgroundColor3 stays at COLOR_HOVER
+    -- after the overlay is removed on re-enable.  We wrap the injected function to
+    -- always reset the header colour alongside the standard enable/disable logic.
+    local _injectedSetEnabled = element.SetEnabled
+    element.SetEnabled = function(enabled)
+        _injectedSetEnabled(enabled)
+        if enabled then
+            -- Reset any lingering hover tint — the mouse may still be over the header.
+            Header.BackgroundColor3 = Config.Theme.Surface
+        end
+    end
 
     -- ── Expose Create* via proxy ──────────────────────────────────────────────
     -- Each method calls the Tab factory with `proxy` as self so elements are
