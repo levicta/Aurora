@@ -8,7 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 local Players          = game:GetService("Players")
 local LocalPlayer      = Players.LocalPlayer
 
--- Built: 2026-03-15 19:58 UTC
+-- Built: 2026-03-12 09:03 UTC
 
 -- ────────────────────────────────────────────────────────────────────────
 --  Lightweight pub/sub event system
@@ -1971,17 +1971,16 @@ end)()
 local _AccordionSection = (function()
 return function(self, cfg)
     cfg = cfg or {}
-    local labelText   = cfg.Text        or "Section"
+    local labelText  = cfg.Text        or "Section"
     local defaultOpen = cfg.DefaultOpen ~= false   -- default: open
-    local expanded    = defaultOpen
-    local OnChanged   = Signal.new()
+    local expanded   = defaultOpen
+    local OnChanged  = Signal.new()
 
     -- ── Outer container (clips inner content when collapsed) ─────────────────
-    -- Surface background gives visible depth against the tab's Background scroll area.
     local OuterFrame = Utility.Create("Frame", {
         Parent           = self.Content,
         Size             = UDim2.new(1, 0, 0, 36),
-        BackgroundColor3 = Config.Theme.Surface,
+        BackgroundColor3 = Config.Theme.Background,
         BorderSizePixel  = 0,
         ClipsDescendants = true,
     })
@@ -1995,7 +1994,7 @@ return function(self, cfg)
         BorderSizePixel  = 0,
     })
     Utility.AddCorner(Header, UDim.new(0, 4))
-    -- Flush bottom corners so header blends into content when open.
+    -- Flush bottom corners so header blends into content when open
     Utility.Create("Frame", {
         Parent           = Header,
         Position         = UDim2.new(0, 0, 1, -6),
@@ -2004,21 +2003,10 @@ return function(self, cfg)
         BorderSizePixel  = 0,
     })
 
-    -- Left accent bar: signals the element is interactive, consistent with
-    -- the notification component's accent style.
-    local AccentBar = Utility.Create("Frame", {
-        Parent           = Header,
-        Position         = UDim2.new(0, 0, 0, 6),
-        Size             = UDim2.new(0, 3, 1, -12),
-        BackgroundColor3 = Config.Theme.Primary,
-        BorderSizePixel  = 0,
-    })
-    Utility.AddCorner(AccentBar, UDim.new(1, 0))
-
     Utility.Create("TextLabel", {
         Parent             = Header,
-        Position           = UDim2.new(0, 14, 0, 0),
-        Size               = UDim2.new(1, -42, 1, 0),
+        Position           = UDim2.new(0, 12, 0, 0),
+        Size               = UDim2.new(1, -38, 1, 0),
         BackgroundTransparency = 1,
         Text               = labelText:upper(),
         TextColor3         = Config.Theme.Primary,
@@ -2027,14 +2015,13 @@ return function(self, cfg)
         TextXAlignment     = Enum.TextXAlignment.Left,
     })
 
-    -- Arrow: Primary colour so it reads as part of the same interactive unit as the title.
     local Arrow = Utility.Create("TextLabel", {
         Parent             = Header,
         Position           = UDim2.new(1, -28, 0, 0),
         Size               = UDim2.new(0, 20, 0, 36),
         BackgroundTransparency = 1,
         Text               = "▼",
-        TextColor3         = Config.Theme.Primary,
+        TextColor3         = Config.Theme.TextMuted,
         Font               = Config.FontBold,
         TextSize           = 11,
         Rotation           = defaultOpen and 180 or 0,
@@ -2101,22 +2088,14 @@ return function(self, cfg)
         applySize(false)
     end)
 
-    -- ── Header toggle + hover feedback ───────────────────────────────────────
-    local ToggleBtn = Utility.Create("TextButton", {
+    -- ── Header toggle ────────────────────────────────────────────────────────
+    Utility.Create("TextButton", {
         Parent             = Header,
         Size               = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Text               = "",
         ZIndex             = 2,
-    })
-
-    ToggleBtn.MouseEnter:Connect(function()
-        Utility.Tween(Header, { BackgroundColor3 = Color3.fromRGB(32, 32, 40) }, 0.15)
-    end)
-    ToggleBtn.MouseLeave:Connect(function()
-        Utility.Tween(Header, { BackgroundColor3 = Config.Theme.Surface }, 0.15)
-    end)
-    ToggleBtn.MouseButton1Click:Connect(function()
+    }).MouseButton1Click:Connect(function()
         expanded = not expanded
         Utility.Tween(Arrow, { Rotation = expanded and 180 or 0 }, 0.2)
         applySize(true)
@@ -2153,22 +2132,25 @@ return function(self, cfg)
     -- ── Expose Create* via proxy ─────────────────────────────────────────────
     -- Each method calls the Tab factory with `proxy` as self so elements are
     -- parented to InnerFrame rather than tab.Content.
-    element.CreateButton         = function(_, c) return Tab.CreateButton(proxy, c) end
-    element.CreateToggle         = function(_, c) return Tab.CreateToggle(proxy, c) end
-    element.CreateSlider         = function(_, c) return Tab.CreateSlider(proxy, c) end
-    element.CreateDropdown       = function(_, c) return Tab.CreateDropdown(proxy, c) end
-    element.CreateSearchDropdown = function(_, c) return Tab.CreateSearchDropdown(proxy, c) end
-    element.CreateMultiSelect    = function(_, c) return Tab.CreateMultiSelect(proxy, c) end
-    element.CreateInput          = function(_, c) return Tab.CreateInput(proxy, c) end
-    element.CreateNumberInput    = function(_, c) return Tab.CreateNumberInput(proxy, c) end
-    element.CreateKeybind        = function(_, c) return Tab.CreateKeybind(proxy, c) end
-    element.CreateColorPicker    = function(_, c) return Tab.CreateColorPicker(proxy, c) end
-    element.CreateLabel          = function(_, c) return Tab.CreateLabel(proxy, c) end
-    element.CreateSection        = function(_, c) return Tab.CreateSection(proxy, c) end
-    element.CreateProgressBar    = function(_, c) return Tab.CreateProgressBar(proxy, c) end
-    element.CreateStatusLabel    = function(_, c) return Tab.CreateStatusLabel(proxy, c) end
-    element.CreateTable          = function(_, c) return Tab.CreateTable(proxy, c) end
-    element.CreateRow            = function(_, c) return Tab.CreateRow(proxy, c) end
+    -- Use `self` (the tab instance) rather than the `Tab` upvalue — Tab is defined
+    -- after _AccordionSection in the build chain so the upvalue would be nil.
+    -- self.CreateX resolves through Tab.__index at call time, which is fine.
+    element.CreateButton         = function(_, c) return self.CreateButton(proxy, c) end
+    element.CreateToggle         = function(_, c) return self.CreateToggle(proxy, c) end
+    element.CreateSlider         = function(_, c) return self.CreateSlider(proxy, c) end
+    element.CreateDropdown       = function(_, c) return self.CreateDropdown(proxy, c) end
+    element.CreateSearchDropdown = function(_, c) return self.CreateSearchDropdown(proxy, c) end
+    element.CreateMultiSelect    = function(_, c) return self.CreateMultiSelect(proxy, c) end
+    element.CreateInput          = function(_, c) return self.CreateInput(proxy, c) end
+    element.CreateNumberInput    = function(_, c) return self.CreateNumberInput(proxy, c) end
+    element.CreateKeybind        = function(_, c) return self.CreateKeybind(proxy, c) end
+    element.CreateColorPicker    = function(_, c) return self.CreateColorPicker(proxy, c) end
+    element.CreateLabel          = function(_, c) return self.CreateLabel(proxy, c) end
+    element.CreateSection        = function(_, c) return self.CreateSection(proxy, c) end
+    element.CreateProgressBar    = function(_, c) return self.CreateProgressBar(proxy, c) end
+    element.CreateStatusLabel    = function(_, c) return self.CreateStatusLabel(proxy, c) end
+    element.CreateTable          = function(_, c) return self.CreateTable(proxy, c) end
+    element.CreateRow            = function(_, c) return self.CreateRow(proxy, c) end
 
     -- ── Override Destroy to cascade to children ──────────────────────────────
     local parentDestroy = element.Destroy
@@ -2414,22 +2396,22 @@ end
 
 -- ── Element factories (assigned from src/elements/*.lua) ─────────────────────
 
-Tab.CreateButton           = _Button
-Tab.CreateToggle           = _Toggle
-Tab.CreateSlider           = _Slider
-Tab.CreateDropdown         = _Dropdown
-Tab.CreateSearchDropdown   = _SearchDropdown
-Tab.CreateMultiSelect      = _MultiSelect
-Tab.CreateInput            = _Input
-Tab.CreateNumberInput      = _NumberInput
-Tab.CreateKeybind          = _Keybind
-Tab.CreateColorPicker      = _ColorPicker
-Tab.CreateLabel            = _Label
-Tab.CreateSection          = _Section
-Tab.CreateProgressBar      = _ProgressBar
-Tab.CreateStatusLabel      = _StatusLabel
-Tab.CreateTable            = _Table
-Tab.CreateRow              = _Row
+Tab.CreateButton       = _Button
+Tab.CreateToggle       = _Toggle
+Tab.CreateSlider       = _Slider
+Tab.CreateDropdown     = _Dropdown
+Tab.CreateSearchDropdown = _SearchDropdown
+Tab.CreateMultiSelect  = _MultiSelect
+Tab.CreateInput        = _Input
+Tab.CreateNumberInput  = _NumberInput
+Tab.CreateKeybind      = _Keybind
+Tab.CreateColorPicker  = _ColorPicker
+Tab.CreateLabel        = _Label
+Tab.CreateSection      = _Section
+Tab.CreateProgressBar  = _ProgressBar
+Tab.CreateStatusLabel  = _StatusLabel
+Tab.CreateTable        = _Table
+Tab.CreateRow            = _Row
 Tab.CreateAccordionSection = _AccordionSection
 
 return Tab
