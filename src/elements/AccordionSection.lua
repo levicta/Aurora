@@ -14,26 +14,19 @@
 --   - section:Destroy() cascades to all children before destroying the frame.
 --   - OuterFrame height is tracked via InnerFrame:GetPropertyChangedSignal
 --     so children added after creation expand the accordion automatically.
---
--- v7.1 visual changes (minimal, no structural changes):
---   - OuterFrame uses Surface instead of Background for visible card depth.
---   - Left accent bar added to header in Primary colour.
---   - Arrow colour changed from TextMuted to Primary to match the title.
---   - ToggleBtn split out so hover feedback can be added via MouseEnter/Leave.
 
 return function(self, cfg)
     cfg = cfg or {}
-    local labelText   = cfg.Text        or "Section"
+    local labelText  = cfg.Text        or "Section"
     local defaultOpen = cfg.DefaultOpen ~= false   -- default: open
-    local expanded    = defaultOpen
-    local OnChanged   = Signal.new()
+    local expanded   = defaultOpen
+    local OnChanged  = Signal.new()
 
     -- ── Outer container (clips inner content when collapsed) ─────────────────
-    -- Surface background gives visible depth against the tab's Background scroll area.
     local OuterFrame = Utility.Create("Frame", {
         Parent           = self.Content,
         Size             = UDim2.new(1, 0, 0, 36),
-        BackgroundColor3 = Config.Theme.Surface,
+        BackgroundColor3 = Config.Theme.Background,
         BorderSizePixel  = 0,
         ClipsDescendants = true,
     })
@@ -47,7 +40,7 @@ return function(self, cfg)
         BorderSizePixel  = 0,
     })
     Utility.AddCorner(Header, UDim.new(0, 4))
-    -- Flush bottom corners so header blends into content when open.
+    -- Flush bottom corners so header blends into content when open
     Utility.Create("Frame", {
         Parent           = Header,
         Position         = UDim2.new(0, 0, 1, -6),
@@ -56,21 +49,10 @@ return function(self, cfg)
         BorderSizePixel  = 0,
     })
 
-    -- Left accent bar: signals the element is interactive, consistent with
-    -- the notification component's accent style.
-    local AccentBar = Utility.Create("Frame", {
-        Parent           = Header,
-        Position         = UDim2.new(0, 0, 0, 6),
-        Size             = UDim2.new(0, 3, 1, -12),
-        BackgroundColor3 = Config.Theme.Primary,
-        BorderSizePixel  = 0,
-    })
-    Utility.AddCorner(AccentBar, UDim.new(1, 0))
-
     Utility.Create("TextLabel", {
         Parent             = Header,
-        Position           = UDim2.new(0, 14, 0, 0),
-        Size               = UDim2.new(1, -42, 1, 0),
+        Position           = UDim2.new(0, 12, 0, 0),
+        Size               = UDim2.new(1, -38, 1, 0),
         BackgroundTransparency = 1,
         Text               = labelText:upper(),
         TextColor3         = Config.Theme.Primary,
@@ -79,14 +61,13 @@ return function(self, cfg)
         TextXAlignment     = Enum.TextXAlignment.Left,
     })
 
-    -- Arrow: Primary colour so it reads as part of the same interactive unit as the title.
     local Arrow = Utility.Create("TextLabel", {
         Parent             = Header,
         Position           = UDim2.new(1, -28, 0, 0),
         Size               = UDim2.new(0, 20, 0, 36),
         BackgroundTransparency = 1,
         Text               = "▼",
-        TextColor3         = Config.Theme.Primary,
+        TextColor3         = Config.Theme.TextMuted,
         Font               = Config.FontBold,
         TextSize           = 11,
         Rotation           = defaultOpen and 180 or 0,
@@ -153,22 +134,14 @@ return function(self, cfg)
         applySize(false)
     end)
 
-    -- ── Header toggle + hover feedback ───────────────────────────────────────
-    local ToggleBtn = Utility.Create("TextButton", {
+    -- ── Header toggle ────────────────────────────────────────────────────────
+    Utility.Create("TextButton", {
         Parent             = Header,
         Size               = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Text               = "",
         ZIndex             = 2,
-    })
-
-    ToggleBtn.MouseEnter:Connect(function()
-        Utility.Tween(Header, { BackgroundColor3 = Color3.fromRGB(32, 32, 40) }, 0.15)
-    end)
-    ToggleBtn.MouseLeave:Connect(function()
-        Utility.Tween(Header, { BackgroundColor3 = Config.Theme.Surface }, 0.15)
-    end)
-    ToggleBtn.MouseButton1Click:Connect(function()
+    }).MouseButton1Click:Connect(function()
         expanded = not expanded
         Utility.Tween(Arrow, { Rotation = expanded and 180 or 0 }, 0.2)
         applySize(true)
