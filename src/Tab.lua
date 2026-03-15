@@ -236,22 +236,21 @@ end
 
 -- ── Element factories (assigned from src/elements/*.lua) ─────────────────────
 
-Tab.CreateButton           = _Button
-Tab.CreateToggle           = _Toggle
-Tab.CreateSlider           = _Slider
-Tab.CreateDropdown         = _Dropdown
-Tab.CreateSearchDropdown   = _SearchDropdown
-Tab.CreateMultiSelect      = _MultiSelect
-Tab.CreateInput            = _Input
-Tab.CreateNumberInput      = _NumberInput
-Tab.CreateKeybind          = _Keybind
-Tab.CreateColorPicker      = _ColorPicker
-Tab.CreateLabel            = _Label
-Tab.CreateSection          = _Section
-Tab.CreateProgressBar      = _ProgressBar
-Tab.CreateStatusLabel      = _StatusLabel
-Tab.CreateTable            = _Table
-Tab.CreateRow              = _Row
-Tab.CreateAccordionSection = _AccordionSection
+Tab.CreateButton       = _Button
+Tab.CreateToggle       = _Toggle
+Tab.CreateSlider       = _Slider
+Tab.CreateDropdown     = _Dropdown
+Tab.CreateSearchDropdown = _SearchDropdown
+Tab.CreateMultiSelect  = _MultiSelect
+Tab.CreateInput        = _Input
+Tab.CreateNumberInput  = _NumberInput
+Tab.CreateKeybind      = _Keybind
+Tab.CreateColorPicker  = _ColorPicker
+Tab.CreateLabel        = _Label
+Tab.CreateSection      = _Section
+Tab.CreateProgressBar  = _ProgressBar
+Tab.CreateStatusLabel  = _StatusLabel
+Tab.CreateTable        = _Table
+Tab.CreateRow          = _Row
 
 return Tab
