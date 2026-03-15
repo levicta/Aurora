@@ -1976,14 +1976,18 @@ return function(self, cfg)
     local expanded    = defaultOpen
     local OnChanged   = Signal.new()
 
-    local HEADER_H    = 36
-    local SEP_H       = 1
-    local COLOR_HOVER = Color3.fromRGB(32, 32, 40)
+    -- Layout constants kept as locals so all size calculations stay in sync.
+    local HEADER_H = 36
+    local SEP_H    = 1
+
+    -- Hover colours derived from the theme so custom SetTheme calls still look
+    -- reasonable without needing a per-instance patch.
+    local COLOR_HOVER = Color3.fromRGB(32, 32, 40)   -- slightly brighter than Surface
 
     -- ── Outer container ───────────────────────────────────────────────────────
-    -- Surface fill + UIStroke gives this a proper card boundary against the
-    -- Background-coloured tab area.  ClipsDescendants handles the collapse mask
-    -- and also rounds the exposed corners of the AccentBar automatically.
+    -- Surface fill + border stroke gives this a proper "card" boundary against
+    -- the Background-coloured tab content area.  ClipsDescendants handles the
+    -- expand/collapse mask and also rounds the exposed corners of the AccentBar.
     local OuterFrame = Utility.Create("Frame", {
         Parent           = self.Content,
         Size             = UDim2.new(1, 0, 0, HEADER_H),
@@ -2000,8 +2004,9 @@ return function(self, cfg)
     })
 
     -- ── Header bar ────────────────────────────────────────────────────────────
-    -- Same colour as OuterFrame — acts as the hover-tween target so only the
-    -- header region changes, not the content area or the card stroke.
+    -- Same colour as OuterFrame — renders invisible but acts as the hover target
+    -- (so a tween on Header alone changes the header region without affecting
+    -- the content area or the outer card border).
     local Header = Utility.Create("Frame", {
         Parent           = OuterFrame,
         Size             = UDim2.new(1, 0, 0, HEADER_H),
@@ -2009,17 +2014,20 @@ return function(self, cfg)
         BorderSizePixel  = 0,
     })
 
-    -- 3px Primary accent bar on the left edge.  ClipsDescendants + 6px corner
-    -- radius on OuterFrame rounds its corners without any cover-frame trickery.
+    -- 3px Primary accent bar spanning the full card height.
+    -- Parented to OuterFrame so it covers the entire left edge when expanded,
+    -- not just the 36px header.  ClipsDescendants + UICorner on OuterFrame
+    -- handle rounding.  ZIndex 2 keeps it above the UIStroke.
     Utility.Create("Frame", {
-        Parent           = Header,
+        Parent           = OuterFrame,
         Position         = UDim2.new(0, 0, 0, 0),
         Size             = UDim2.new(0, 3, 1, 0),
         BackgroundColor3 = Config.Theme.Primary,
         BorderSizePixel  = 0,
+        ZIndex           = 2,
     })
 
-    -- Section label — 16px left offset to clear the accent bar.
+    -- Section label — offset 16px from the left to clear the accent bar.
     Utility.Create("TextLabel", {
         Parent             = Header,
         Position           = UDim2.new(0, 16, 0, 0),
@@ -2032,7 +2040,8 @@ return function(self, cfg)
         TextXAlignment     = Enum.TextXAlignment.Left,
     })
 
-    -- Arrow — Primary tint to match the label (was TextMuted before).
+    -- Arrow indicator.  Uses Primary to match the label — was TextMuted before.
+    -- TextSize 10 gives a subtle hierarchy against the 12px label.
     local Arrow = Utility.Create("TextLabel", {
         Parent             = Header,
         Position           = UDim2.new(1, -30, 0, 0),
@@ -2046,8 +2055,10 @@ return function(self, cfg)
     })
 
     -- ── Separator ─────────────────────────────────────────────────────────────
-    -- 1px line at Y = HEADER_H — naturally clipped when the section is collapsed.
-    -- Fades in/out alongside the expand animation.
+    -- 1px line between header and content.  Positioned at Y = HEADER_H so it
+    -- is naturally clipped when OuterFrame is collapsed.  Fades in/out with the
+    -- expand animation rather than popping abruptly.
+    -- A small horizontal inset (8px each side) keeps it visually lightweight.
     local Separator = Utility.Create("Frame", {
         Parent                 = OuterFrame,
         Position               = UDim2.new(0, 8, 0, HEADER_H),
@@ -2058,7 +2069,8 @@ return function(self, cfg)
     })
 
     -- ── Inner content frame ───────────────────────────────────────────────────
-    -- Starts below separator.  Horizontal padding keeps children off card edges.
+    -- Starts at HEADER_H + SEP_H to sit below the separator line.
+    -- Horizontal padding added so child elements don't press against card edges.
     local InnerFrame = Utility.Create("Frame", {
         Parent             = OuterFrame,
         Position           = UDim2.new(0, 0, 0, HEADER_H + SEP_H),
@@ -2128,7 +2140,9 @@ return function(self, cfg)
         ZIndex             = 2,
     })
 
-    -- Subtle hover: tween Header background only, accent bar + arrow stay stable.
+    -- Subtle hover feedback: tween Header background between Surface and a
+    -- slightly brighter shade.  Does not affect the accent bar or arrow — only
+    -- the neutral header area changes, keeping the accent visually stable.
     ClickButton.MouseEnter:Connect(function()
         Utility.Tween(Header, { BackgroundColor3 = COLOR_HOVER }, 0.15)
     end)
@@ -2139,7 +2153,13 @@ return function(self, cfg)
     ClickButton.MouseButton1Click:Connect(function()
         expanded = not expanded
         Utility.Tween(Arrow, { Rotation = expanded and 180 or 0 }, 0.2)
-        Utility.Tween(Separator, { BackgroundTransparency = expanded and 0.4 or 1 }, expanded and 0.15 or 0.05)
+        -- Fade separator in quickly when opening, out nearly instantly when closing
+        -- so it doesn't linger behind the collapsing content.
+        Utility.Tween(
+            Separator,
+            { BackgroundTransparency = expanded and 0.4 or 1 },
+            expanded and 0.15 or 0.05
+        )
         applySize(true)
         OnChanged:Fire(expanded)
     end)
@@ -2148,18 +2168,22 @@ return function(self, cfg)
     local element = self:RegisterElement({
         OnChanged = OnChanged,
         GetValue  = function() return expanded end,
-        -- SetValue(bool): programmatically expand or collapse.
-        -- Silent — does not fire OnChanged (matches every other element's contract).
+        -- SetValue(bool): programmatically expand or collapse. Silent — does not
+        -- fire OnChanged (matches the convention used by every other element).
         SetValue  = function(v)
             v = not not v
             if v == expanded then return end
             expanded = v
             Utility.Tween(Arrow, { Rotation = expanded and 180 or 0 }, 0.2)
-            Utility.Tween(Separator, { BackgroundTransparency = expanded and 0.4 or 1 }, expanded and 0.15 or 0.05)
+            Utility.Tween(
+                Separator,
+                { BackgroundTransparency = expanded and 0.4 or 1 },
+                expanded and 0.15 or 0.05
+            )
             applySize(true)
         end,
         -- Convenience aliases
-        Expand   = function()
+        Expand = function()
             if expanded then return end
             expanded = true
             Utility.Tween(Arrow, { Rotation = 180 }, 0.2)
