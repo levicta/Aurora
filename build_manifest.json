@@ -1,0 +1,147 @@
+{
+  "version": "7.0.0",
+  "preamble": [
+    "--// Aurora UI Library",
+    "--// Version: 7.0.0",
+    "--// Built output — do not edit directly.",
+    "--// Source: src/  |  Rebuild: python3 build.py",
+    "",
+    "local TweenService     = game:GetService(\"TweenService\")",
+    "local UserInputService = game:GetService(\"UserInputService\")",
+    "local Players          = game:GetService(\"Players\")",
+    "local LocalPlayer      = Players.LocalPlayer",
+    ""
+  ],
+  "modules": [
+    {
+      "name": "Signal",
+      "file": "src/Signal.lua",
+      "comment": "Lightweight pub/sub event system"
+    },
+    {
+      "name": "Config",
+      "file": "src/Config.lua",
+      "comment": "Mutable theme + animation configuration"
+    },
+    {
+      "name": "ConnSet",
+      "file": "src/ConnSet.lua",
+      "comment": "O(1) connection ownership set"
+    },
+    {
+      "name": "Utility",
+      "file": "src/Utility.lua",
+      "comment": "Shared helpers: Create, Tween (with cancellation), AddCorner, AddShadow, MakeDraggable"
+    },
+    {
+      "name": "Expandable",
+      "file": "src/Expandable.lua",
+      "comment": "Shared expand/collapse base for accordion elements"
+    },
+    {
+      "name": "_Button",
+      "file": "src/elements/Button.lua",
+      "comment": "Tab:CreateButton factory"
+    },
+    {
+      "name": "_Toggle",
+      "file": "src/elements/Toggle.lua",
+      "comment": "Tab:CreateToggle factory"
+    },
+    {
+      "name": "_Slider",
+      "file": "src/elements/Slider.lua",
+      "comment": "Tab:CreateSlider factory"
+    },
+    {
+      "name": "_Dropdown",
+      "file": "src/elements/Dropdown.lua",
+      "comment": "Tab:CreateDropdown factory"
+    },
+    {
+      "name": "_SearchDropdown",
+      "file": "src/elements/SearchDropdown.lua",
+      "comment": "Tab:CreateSearchDropdown factory"
+    },
+    {
+      "name": "_MultiSelect",
+      "file": "src/elements/MultiSelect.lua",
+      "comment": "Tab:CreateMultiSelect factory"
+    },
+    {
+      "name": "_Input",
+      "file": "src/elements/Input.lua",
+      "comment": "Tab:CreateInput factory"
+    },
+    {
+      "name": "_NumberInput",
+      "file": "src/elements/NumberInput.lua",
+      "comment": "Tab:CreateNumberInput factory"
+    },
+    {
+      "name": "_Keybind",
+      "file": "src/elements/Keybind.lua",
+      "comment": "Tab:CreateKeybind factory"
+    },
+    {
+      "name": "_ColorPicker",
+      "file": "src/elements/ColorPicker.lua",
+      "comment": "Tab:CreateColorPicker factory"
+    },
+    {
+      "name": "_Label",
+      "file": "src/elements/Label.lua",
+      "comment": "Tab:CreateLabel factory"
+    },
+    {
+      "name": "_Section",
+      "file": "src/elements/Section.lua",
+      "comment": "Tab:CreateSection factory"
+    },
+    {
+      "name": "_ProgressBar",
+      "file": "src/elements/ProgressBar.lua",
+      "comment": "Tab:CreateProgressBar factory"
+    },
+    {
+      "name": "_StatusLabel",
+      "file": "src/elements/StatusLabel.lua",
+      "comment": "Tab:CreateStatusLabel factory"
+    },
+    {
+      "name": "_Table",
+      "file": "src/elements/Table.lua",
+      "comment": "Tab:CreateTable factory"
+    },
+    {
+      "name": "_Row",
+      "file": "src/elements/Row.lua",
+      "comment": "Tab:CreateRow factory (NEW in v7)"
+    },
+    {
+      "name": "Tab",
+      "file": "src/Tab.lua",
+      "comment": "Tab prototype — element methods defined once on metatable"
+    },
+    {
+      "name": "Notification",
+      "file": "src/Notification.lua",
+      "comment": "Per-window notification layer factory + shared singleton"
+    },
+    {
+      "name": "Window",
+      "file": "src/Window.lua",
+      "comment": "Window factory function"
+    },
+    {
+      "name": "ConfigSystem",
+      "file": "src/ConfigSystem.lua",
+      "comment": "Config persistence: Link elements, auto-save/load, profiles, import/export"
+    },
+    {
+      "name": "Aurora",
+      "file": "src/init.lua",
+      "comment": "Public API surface — returned to consumer"
+    }
+  ]
+}
